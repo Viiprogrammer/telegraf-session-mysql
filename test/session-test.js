@@ -11,15 +11,16 @@ const options = {
 describe('Telegraf Session', function () {
   it('should retrieve and save session', function (done) {
     const mySQLSession = new MySQLSession(options)
-    const key = 'session.key'
-    mySQLSession.getSession(key)
+    const userID = 1
+    const chatID = 2
+    mySQLSession.getSession(userID, chatID)
       .then((session) => {
         should.exist(session)
         session.foo = 42
-        return mySQLSession.saveSession(key, session)
+        return mySQLSession.saveSession(userID, chatID, session)
       })
       .then(() => {
-        return mySQLSession.getSession(key)
+        return mySQLSession.getSession(userID, chatID)
       })
       .then((session) => {
         should.exist(session)
