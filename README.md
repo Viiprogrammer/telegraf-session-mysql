@@ -8,6 +8,9 @@ MySQL powered session middleware for [Telegraf](https://github.com/telegraf/tele
 Saves session both on mysql and in memory and use memory where possible.
 
 ## Installation
+> **[Node.js](https://nodejs.org/) 12.0.0 or newer is required**
+
+> **[MySQL](https://www.mysql.com/) 5.5.62 or newer is required**
 
 ```js
 $ npm install telegraf-session-mysql
@@ -42,13 +45,17 @@ const session = new MySQLSession({
 
 telegraf.use(session.middleware())
 
-telegraf.on('text', (ctx) => {
-  ctx.session.counter = ctx.session.counter || 0
-  ctx.session.counter++
-  console.log('Session', ctx.session)
-})
+(async() => {
+  await session.connect()
 
-telegraf.startPolling()
+  telegraf.on('text', (ctx, next) => {
+    ctx.session.counter = ctx.session.counter || 0
+    ctx.session.counter++
+    console.log('Session', ctx.session)
+  })
+  
+  telegraf.startPolling()
+})()
 ```
 
 When you have stored the session key beforehand, you can access a
@@ -57,16 +64,19 @@ you perform OAUTH or something similar, when a REDIRECT_URI is called
 on your bot server.
 
 ```js
-const mysqlSession = new MySQLSession(...)
+const session = new MySQLSession(...)
 
 // Retrieve session state by session key
-getSession (userID, chatID)
+session.getSession (userID, chatID)
   .then((session) => {
     console.log('Session state', session)
   })
 
 // Save session state
-mysqlSession.saveSession(userID, chatID, session)
+session.saveSession(userID, chatID, session)
+  .then((session) => {
+    console.log('Session saved')
+  })
 ```
 
 If you want get session without `userID` or `chatID` (`userProperty` or `chatProperty` enabled), you must pass `0` (zero) into field
@@ -74,37 +84,42 @@ If you want get session without `userID` or `chatID` (`userProperty` or `chatPro
 For example:
 
 ```js
-const mysqlSession = new MySQLSession(...)
+const session = new MySQLSession(...)
 
 // Retrieve session state by session key
-getSession (userID, 0)
+session.getSession (userID, 0)
   .then((session) => {
     console.log('Session state', session)
   })
 
 // Save session state
-mysqlSession.saveSession(userID, 0,  session)
+session.saveSession(userID, 0,  session)
+  .then((session) => {
+    console.log('Session saved')
+  })
 ```
 
 ## API
 
-### Database options 
-
-* `host`:  hostname of mysql server
-* `user`: username
-* `password`: user password
-* `database`:  Database name
-
 ### Options
-
-* `property`: context property name (default: `session`)
-* `userProperty`: context property name for user session (default: not used)
-* `chatProperty`: context property name for chat session (default: not used)
-* `table`: name of database table (default: `session`)
-* `lifetime`: Sessions life time (default: `300` seconds)
-* `interval`: Garbage collector call interval (deleting sessions with expired lifetime, default: `300000` ms)
-* `getSessionKey`: session key function `(ctx) => any`
+* `connection`: Object with creditnails
+  * `host`:  hostname of mysql server
+  * `user`: username
+  * `password`: user password
+  * `database`:  Database name
+* `options`
+  * `property`: context property name (default: `session`)
+  * `userProperty`: context property name for user session (default: not used)
+  * `chatProperty`: context property name for chat session (default: not used)
+  * `table`: name of database table (default: `session`)
+  * `lifetime`: Sessions life time (default: `300` seconds)
+  * `interval`: Garbage collector call interval (deleting sessions with expired lifetime, default: `300000` ms)
+  * `getSessionKey`: session key function `(ctx) => any`
   
+### Method `.connect()`: Promise
+
+> Call `.connect()` method for create database connection pool and auto try to create table.
+
 Default implementation of `getSessionKey`:
 
 ```js
@@ -124,11 +139,11 @@ Useing userProperty/chatProperty:
 
 ```js
 
-const mysqlSession = new MySQLSession(..., {
+const session = new MySQLSession(..., {
   chatProperty: 'chatSession',
   userProperty: 'userSession'
 })
-
+...
 telegraf.on('text', (ctx) => {
   ctx.chatSession = {foo: 'bar'}; //Session data stored for chat (not related to user)
   ctx.userSession = {foo: 'bar'}; //Session data stored for user (not related to chat)
@@ -149,7 +164,7 @@ telegraf.on('text', (ctx) => {
 To destroy sessions data and close databse connection, use `destroy` method.
 
 ```js
-const mysqlSession = new MySQLSession();
+const session = new MySQLSession();
 ...
-mysqlSession.destroy();
+session.destroy();
 ```
