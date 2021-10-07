@@ -17,10 +17,12 @@ $ npm install telegraf-session-mysql
 Module can auto create table in database, but if you want to create manually, use this request
 
 ```SQL
-CREATE TABLE `sessions` (
-  `id` varchar(100) NOT NULL,
-  `session` longtext NOT NULL,
-  PRIMARY KEY (`id`))
+CREATE TABLE IF NOT EXISTS sessions (
+  user_id BIGINT(20) NOT NULL,
+  chat_id BIGINT(20) NOT NULL,
+  session LONGTEXT NOT NULL,
+  UNIQUE KEY user_id(user_id, chat_id)
+) ENGINE = innodb DEFAULT CHARSET = utf8
 ```
 
 ## Example
